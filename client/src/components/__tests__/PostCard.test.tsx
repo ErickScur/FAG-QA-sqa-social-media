@@ -8,6 +8,7 @@ const post: Post = {
   title: "Primeiro post",
   body: "Conteúdo do primeiro post",
   liked: false,
+  reactions: { likes: 192, dislikes: 25 },
 };
 
 describe("PostCard", () => {
@@ -17,6 +18,13 @@ describe("PostCard", () => {
     expect(screen.getByText("Primeiro post")).toBeInTheDocument();
     expect(screen.getByText("Conteúdo do primeiro post")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /curtir/i })).toBeInTheDocument();
+  });
+
+  it("mostra a quantidade de likes e dislikes do post", () => {
+    render(<PostCard post={post} isAuthenticated={false} onLike={jest.fn()} />);
+
+    expect(screen.getByText("👍 192 likes")).toBeInTheDocument();
+    expect(screen.getByText("👎 25 dislikes")).toBeInTheDocument();
   });
 
   it("avisa o visitante deslogado que é preciso estar autenticado para curtir", () => {
