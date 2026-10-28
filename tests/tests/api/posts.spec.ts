@@ -52,3 +52,15 @@ test('GET /posts marca como liked o que o usuario curtiu', async ({ request }) =
   expect(posts.find((p) => p.id === 1)?.liked).toBe(true);
   expect(posts.filter((p) => p.id !== 1).every((p) => !p.liked)).toBe(true);
 });
+
+test('GET /posts traz likes e dislikes iguais aos do DummyJSON', async ({ request }) => {
+  const res = await request.get('/posts', { params: { limit: 5 } });
+  const dummy = await request.get('https://dummyjson.com/posts', { params: { limit: 5 } });
+
+  const posts = (await res.json()).posts;
+  const esperado = (await dummy.json()).posts;
+
+  expect(posts.map((p: { reactions: object }) => p.reactions)).toEqual(
+    esperado.map((p: { reactions: object }) => p.reactions),
+  );
+});
