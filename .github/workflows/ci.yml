@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  api-unit:
+    name: Testes unitarios da API
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+
+      - run: ./mvnw -B test
+
+  client-unit:
+    name: Testes unitarios do client
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - run: npm ci
+      - run: npm test -- --ci
+
+  e2e-api:
+    name: Testes E2E e de API
+    needs: [api-unit, client-unit]
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: sqa_social_media
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/sqa_social_media?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      NEXT_PUBLIC_BASE_URL: http://localhost:8080
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            client/package-lock.json
+            tests/package-lock.json
+
+      - name: Sobe a API
+        working-directory: api
+        run: |
+          ./mvnw -B -q package -DskipTests
+          nohup java -jar target/demo-0.0.1-SNAPSHOT.jar > api.log 2>&1 &
+
+      - name: Sobe o client
+        working-directory: client
+        run: |
+          npm ci
+          npm run build
+          nohup npm start > client.log 2>&1 &
+
+      - name: Instala o Playwright
+        working-directory: tests
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Aguarda API e client
+        run: npx --yes wait-on -t 180000 "http-get://localhost:8080/posts/liked?userId=1" http-get://localhost:3000
+
+      - name: Roda os testes E2E e de API
+        working-directory: tests
+        run: npx playwright test
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relatorio-playwright
+          path: |
+            tests/playwright-report
+            api/api.log
+            client/client.log
+          retention-days: 7
