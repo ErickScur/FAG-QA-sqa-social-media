@@ -58,12 +58,6 @@ public class AuthController {
           .body(new ErrorResponse("E-mail inválido", 422));
     }
 
-    if (!service.isPasswordValid(userDTO.getPassword())) {
-      return ResponseEntity
-          .status(422)
-          .body(new ErrorResponse("Senha inválida", 422));
-    }
-
     User user = service.findByEmail(userDTO.getEmail());
 
     if (user == null || !user.getPassword().equals(userDTO.getPassword())) {

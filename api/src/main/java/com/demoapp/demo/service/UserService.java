@@ -15,12 +15,12 @@ public class UserService {
   }
 
   public boolean isEmailValid(String email) {
-    return email != null && email.contains("@");
+    return email != null && email.matches("^[^@\\s]+@[^@\\s]+$");
   }
 
   public boolean isPasswordValid(String password) {
-    String passRegex = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&]).{8,}$";
-    return Pattern.matches(passRegex, password);
+    String passRegex = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{8,}$";
+    return password != null && Pattern.matches(passRegex, password);
   }
 
   public User createUser(String email, String password) {
